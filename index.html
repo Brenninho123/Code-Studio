@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Studio</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: #1e1e1e;
+      color: #cccccc;
+      overflow: hidden;
+    }
+
+    .menu-bar {
+      height: 30px;
+      background-color: #3c3c3c;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 13px;
+      gap: 15px;
+      border-bottom: 1px solid #2b2b2b;
+    }
+
+    .menu-item {
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .menu-item:hover {
+      background-color: #505050;
+    }
+
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .activity-bar {
+      width: 48px;
+      background-color: #333333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 10px;
+      gap: 20px;
+    }
+
+    .activity-icon {
+      font-size: 18px;
+      color: #858585;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .activity-icon:hover, .activity-icon.active {
+      color: #ffffff;
+    }
+
+    .sidebar {
+      width: 240px;
+      background-color: #252526;
+      border-right: 1px solid #1e1e1e;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 10px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      color: #bbbbbb;
+      text-transform: uppercase;
+    }
+
+    .file-tree {
+      list-style: none;
+      font-size: 13px;
+    }
+
+    .file-item {
+      padding: 6px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-item:hover {
+      background-color: #2a2d2e;
+    }
+
+    .file-item.active {
+      background-color: #37373d;
+      color: #ffffff;
+    }
+
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #1e1e1e;
+      overflow: hidden;
+    }
+
+    .tabs-container {
+      height: 35px;
+      background-color: #252526;
+      display: flex;
+      overflow-x: auto;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 15px;
+      background-color: #2d2d2d;
+      font-size: 13px;
+      border-right: 1px solid #252526;
+      cursor: pointer;
+      color: #969696;
+    }
+
+    .tab.active {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      border-top: 2px solid #007acc;
+    }
+
+    .tab .close-tab {
+      font-size: 11px;
+      border-radius: 3px;
+      padding: 2px;
+    }
+
+    .tab .close-tab:hover {
+      background-color: #4a4a4a;
+    }
+
+    #editor-container {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    .status-bar {
+      height: 22px;
+      background-color: #007acc;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .status-item {
+      display: flex;
+      gap: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="menu-bar">
+    <div class="menu-item">File</div>
+    <div class="menu-item">Edit</div>
+    <div class="menu-item">Selection</div>
+    <div class="menu-item">View</div>
+    <div class="menu-item">Go</div>
+    <div class="menu-item">Run</div>
+    <div class="menu-item">Terminal</div>
+    <div class="menu-item">Help</div>
+  </div>
+
+  <div class="app-body">
+    <div class="activity-bar">
+      <i class="fa-regular fa-copy activity-icon active" title="Explorer"></i>
+      <i class="fa-solid fa-magnifying-glass activity-icon" title="Search"></i>
+      <i class="fa-solid fa-code-branch activity-icon" title="Source Control"></i>
+      <i class="fa-solid fa-play activity-icon" title="Run and Debug"></i>
+      <i class="fa-solid fa-border-all activity-icon" title="Extensions"></i>
+    </div>
+
+    <div class="sidebar">
+      <div class="sidebar-header">Explorer</div>
+      <ul class="file-tree">
+        <li class="file-item active" onclick="switchFile('index.html', 'html')">
+          <i class="fa-brands fa-html5" style="color: #e34c26;"></i> index.html
+        </li>
+        <li class="file-item" onclick="switchFile('style.css', 'css')">
+          <i class="fa-brands fa-css3-alt" style="color: #264de4;"></i> style.css
+        </li>
+        <li class="file-item" onclick="switchFile('script.js', 'javascript')">
+          <i class="fa-brands fa-js" style="color: #f7df1e;"></i> script.js
+        </li>
+      </ul>
+    </div>
+
+    <div class="workspace">
+      <div class="tabs-container">
+        <div class="tab active" id="current-tab">
+          <i class="fa-brands fa-html5" style="color: #e34c26;"></i>
+          <span id="tab-filename">index.html</span>
+          <i class="fa-solid fa-xmark close-tab"></i>
+        </div>
+      </div>
+
+      <div id="editor-container"></div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-item">
+      <span><i class="fa-solid fa-code-branch"></i> main</span>
+      <span><i class="fa-solid fa-circle-xmark"></i> 0 <i class="fa-solid fa-triangle-exclamation"></i> 0</span>
+    </div>
+    <div class="status-item">
+      <span>Ln 1, Col 1</span>
+      <span>UTF-8</span>
+      <span id="language-indicator">HTML</span>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
+  
+  <script>
+    let editor;
+
+    const files = {
+      'index.html': {
+        language: 'html',
+        content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>Hello World</title>\n</head>\n<body>\n  <h1>Welcome to Code Studio!</h1>\n</body>\n</html>'
+      },
+      'style.css': {
+        language: 'css',
+        content: 'body {\n  background-color: #121212;\n  color: #ffffff;\n  font-family: sans-serif;\n}'
+      },
+      'script.js': {
+        language: 'javascript',
+        content: 'console.log("Hello, World!");'
+      }
+    };
+
+    let activeFile = 'index.html';
+
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
+
+    require(['vs/editor/editor.main'], function () {
+      editor = monaco.editor.create(document.getElementById('editor-container'), {
+        value: files[activeFile].content,
+        language: files[activeFile].language,
+        theme: 'vs-dark',
+        automaticLayout: true,
+        fontSize: 14,
+        minimap: { enabled: true }
+      });
+    });
+
+    function switchFile(filename, language) {
+      if (editor) {
+        files[activeFile].content = editor.getValue();
+      }
+
+      activeFile = filename;
+
+      document.getElementById('tab-filename').innerText = filename;
+      document.getElementById('language-indicator').innerText = language.toUpperCase();
+
+      const items = document.querySelectorAll('.file-item');
+      items.forEach(item => item.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      if (editor) {
+        monaco.editor.setModelLanguage(editor.getModel(), language);
+        editor.setValue(files[filename].content);
+      }
+    }
+  </script>
+</body>
+</html>
