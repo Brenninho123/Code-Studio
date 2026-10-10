@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Code Studio - Web IDE</title>
-  
+  <title>Code Studio</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.css">
@@ -29,12 +29,6 @@
       overflow: hidden;
     }
 
-    .editor-container {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* Custom Scrollbar for VS Code Aesthetic */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -76,11 +70,10 @@
       </nav>
     </div>
 
-    <!-- Action Toolbar -->
     <div class="flex items-center space-x-2">
       <button id="run-btn" onclick="togglePreview()" class="bg-[#238636] hover:bg-[#2ea043] text-white px-2.5 py-1 rounded flex items-center space-x-1 text-xs font-semibold shadow">
         <i class="fa-solid fa-play"></i>
-        <span class="hidden sm:inline">Run</span>
+        <span class="hidden sm:inline">Run / Output</span>
       </button>
       <button onclick="formatCurrentCode()" class="bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-200 px-2 py-1 rounded text-xs border border-[#454545]" title="Format Code">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -98,54 +91,68 @@
 
   <div class="flex flex-1 overflow-hidden relative">
 
-    <!-- Activity Bar (Desktop) -->
     <div class="hidden md:flex w-12 bg-[#333333] flex-col items-center py-3 space-y-5 text-lg text-[#858585] shrink-0 border-r border-[#252526]">
-      <i class="fa-regular fa-copy text-white cursor-pointer" title="Explorer"></i>
-      <i class="fa-solid fa-magnifying-glass hover:text-white cursor-pointer" title="Search"></i>
-      <i class="fa-solid fa-code-branch hover:text-white cursor-pointer" title="Source Control"></i>
-      <i class="fa-solid fa-border-all hover:text-white cursor-pointer" title="Extensions"></i>
+      <i id="act-explorer" onclick="switchSidebarTab('explorer')" class="fa-regular fa-copy text-white cursor-pointer" title="Explorer"></i>
+      <i id="act-extensions" onclick="switchSidebarTab('extensions')" class="fa-solid fa-border-all hover:text-white cursor-pointer" title="Extensions"></i>
     </div>
 
-    <!-- Mobile Sidebar Backdrop Overlay -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleMobileSidebar()"></div>
 
-    <!-- Sidebar Explorer Panel -->
     <aside id="sidebar" class="fixed md:relative z-30 w-64 h-full bg-[#252526] border-r border-[#1e1e1e] flex flex-col -translate-x-full md:translate-x-0 sidebar-transition">
-      <div class="p-3 text-xs font-bold tracking-wider text-gray-400 uppercase flex justify-between items-center border-b border-[#333333]">
-        <span>Explorer</span>
-        <div class="flex space-x-2 text-sm">
-          <button onclick="promptNewFile()" class="hover:text-white" title="New File"><i class="fa-solid fa-file-circle-plus"></i></button>
-          <button onclick="toggleMobileSidebar()" class="md:hidden hover:text-white" title="Close Sidebar"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div id="sidebar-explorer" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-3 text-xs font-bold tracking-wider text-gray-400 uppercase flex justify-between items-center border-b border-[#333333]">
+          <span>Explorer</span>
+          <div class="flex space-x-2 text-sm">
+            <button onclick="promptNewFile()" class="hover:text-white" title="New File"><i class="fa-solid fa-file-circle-plus"></i></button>
+            <button onclick="toggleMobileSidebar()" class="md:hidden hover:text-white" title="Close Sidebar"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto py-2">
+          <div class="px-3 py-1 text-xs text-gray-500 font-semibold uppercase">Project Files</div>
+          <ul id="file-list" class="text-xs"></ul>
         </div>
       </div>
 
-      <!-- File List Tree -->
-      <div class="flex-1 overflow-y-auto py-2">
-        <div class="px-3 py-1 text-xs text-gray-500 font-semibold uppercase">Project Files</div>
-        <ul id="file-list" class="text-xs"></ul>
+      <div id="sidebar-extensions" class="flex-1 flex-col overflow-hidden hidden">
+        <div class="p-3 text-xs font-bold tracking-wider text-gray-400 uppercase flex justify-between items-center border-b border-[#333333]">
+          <span>Extensions</span>
+          <button onclick="toggleMobileSidebar()" class="md:hidden hover:text-white" title="Close Sidebar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto py-2 px-2">
+          <ul id="extensions-list" class="space-y-2 text-xs"></ul>
+        </div>
       </div>
+
+      <div class="flex md:hidden border-t border-[#333333] bg-[#2d2d2d] text-xs">
+        <button onclick="switchSidebarTab('explorer')" class="flex-1 py-2 text-center text-gray-300 hover:text-white border-r border-[#333333]">
+          <i class="fa-regular fa-copy"></i> Files
+        </button>
+        <button onclick="switchSidebarTab('extensions')" class="flex-1 py-2 text-center text-gray-300 hover:text-white">
+          <i class="fa-solid fa-border-all"></i> Extensions
+        </button>
+      </div>
+
     </aside>
 
-    <!-- Main Code Workspace Area -->
     <main class="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden min-w-0">
       
-      <!-- Tab Header Container -->
       <div id="tabs-bar" class="h-9 bg-[#252526] flex items-center overflow-x-auto border-b border-[#1e1e1e] shrink-0 no-scrollbar"></div>
 
-      <!-- Quick Mobile Control Touch Toolbar -->
       <div class="flex md:hidden bg-[#2d2d2d] border-b border-[#3c3c3c] px-2 py-1 space-x-1 overflow-x-auto text-xs shrink-0">
         <button onclick="insertText('\t')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2.5 py-1 rounded font-mono">Tab</button>
         <button onclick="triggerUndo()" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2.5 py-1 rounded"><i class="fa-solid fa-rotate-left"></i></button>
         <button onclick="triggerRedo()" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2.5 py-1 rounded"><i class="fa-solid fa-rotate-right"></i></button>
         <button onclick="insertText('{')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">{</button>
         <button onclick="insertText('}')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">}</button>
+        <button onclick="insertText(';')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">;</button>
+        <button onclick="insertText('(')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">(</button>
+        <button onclick="insertText(')')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">)</button>
         <button onclick="insertText('<')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">&lt;</button>
         <button onclick="insertText('>')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">&gt;</button>
-        <button onclick="insertText(';')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">;</button>
         <button onclick="insertText('=')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">=</button>
       </div>
 
-      <!-- Editor Mount Frame -->
       <div class="flex-1 relative w-full h-full">
         <div id="editor-container" class="absolute inset-0"></div>
       </div>
@@ -154,8 +161,8 @@
     <div id="preview-modal" class="hidden fixed md:absolute inset-0 z-40 bg-[#1e1e1e] flex flex-col">
       <div class="h-9 bg-[#252526] px-3 border-b border-[#333333] flex justify-between items-center text-xs">
         <div class="flex items-center space-x-2 text-gray-300">
-          <i class="fa-solid fa-globe text-blue-400"></i>
-          <span class="font-semibold">Live Preview</span>
+          <i class="fa-solid fa-terminal text-green-400"></i>
+          <span class="font-semibold">Output / Terminal Preview</span>
         </div>
         <div class="flex items-center space-x-2">
           <button onclick="refreshPreview()" class="hover:text-white px-2 py-1 rounded bg-[#333333]" title="Reload Preview">
@@ -166,8 +173,9 @@
           </button>
         </div>
       </div>
-      <div class="flex-1 bg-white relative">
-        <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
+      <div class="flex-1 bg-black text-green-400 font-mono p-4 overflow-auto text-xs sm:text-sm relative">
+        <pre id="terminal-output" class="whitespace-pre-wrap"></pre>
+        <iframe id="preview-frame" class="w-full h-full border-none hidden"></iframe>
       </div>
     </div>
 
@@ -192,30 +200,57 @@
     let editor = null;
     let isPreviewOpen = false;
 
-    // File Data Storage State
+    const extensions = [
+      { id: 'cpp-tools', name: 'C/C++ Tools', desc: 'Syntax highlighting & Intellisense for C and C++', installed: true, icon: 'fa-solid fa-c' },
+      { id: 'lua-intellisense', name: 'Lua Intellisense', desc: 'Autocomplete & language support for Lua scripts', installed: true, icon: 'fa-solid fa-moon' },
+      { id: 'haxe-language', name: 'Haxe Language Server', desc: 'Syntax, completion, and support for Haxe code', installed: true, icon: 'fa-solid fa-fire' },
+      { id: 'auto-save', name: 'Auto Save', desc: 'Automatically saves editor contents continuously', installed: false, icon: 'fa-solid fa-floppy-disk' },
+      { id: 'bracket-pair', name: 'Bracket Pair Colorizer', desc: 'Colorizes matching brackets for improved readability', installed: true, icon: 'fa-solid fa-code' },
+      { id: 'rainbow-indent', name: 'Rainbow Indent Guides', desc: 'Renders colorful indentation guides in active file', installed: false, icon: 'fa-solid fa-bars-staggered' },
+      { id: 'prettier', name: 'Prettier Code Formatter', desc: 'Enables automatic code formatting on command', installed: true, icon: 'fa-solid fa-wand-magic-sparkles' }
+    ];
+
     const files = {
       'index.html': {
         language: 'html',
-        content: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>My Web Page</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="container">\n    <h1>Hello from Code Studio!</h1>\n    <p>Edit HTML, CSS, and JS to see changes live.</p>\n    <button id="btn">Click Me</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>'
+        content: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Code Studio</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="container">\n    <h1>Hello from Code Studio!</h1>\n    <p>Supports HTML, CSS, JS, C++, C, Haxe, Lua, JSON.</p>\n    <button id="btn">Click Me</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>'
       },
       'style.css': {
         language: 'css',
-        content: 'body {\n  margin: 0;\n  padding: 0;\n  font-family: sans-serif;\n  background: #0f172a;\n  color: #f8fafc;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n}\n\n.container {\n  text-align: center;\n  background: #1e293b;\n  padding: 2rem;\n  border-radius: 12px;\n  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);\n}\n\nbutton {\n  background: #3b82f6;\n  color: white;\n  border: none;\n  padding: 0.5rem 1rem;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 1rem;\n  margin-top: 1rem;\n}\n\nbutton:hover {\n  background: #2563eb;\n}'
+        content: 'body {\n  margin: 0;\n  padding: 0;\n  font-family: sans-serif;\n  background: #0f172a;\n  color: #f8fafc;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n}\n\n.container {\n  text-align: center;\n  background: #1e293b;\n  padding: 2rem;\n  border-radius: 12px;\n}\n\nbutton {\n  background: #3b82f6;\n  color: white;\n  border: none;\n  padding: 0.5rem 1rem;\n  border-radius: 6px;\n  cursor: pointer;\n  margin-top: 1rem;\n}'
       },
       'script.js': {
         language: 'javascript',
-        content: 'document.getElementById("btn").addEventListener("click", () => {\n  alert("Interactive script working inside Code Studio!");\n});'
+        content: 'document.getElementById("btn").addEventListener("click", () => {\n  alert("Interactive script executed!");\n});'
+      },
+      'main.cpp': {
+        language: 'cpp',
+        content: '#include <iostream>\n#include <vector>\n#include <string>\n\nclass Studio {\npublic:\n    std::string name;\n    Studio(std::string n) : name(n) {}\n    void run() {\n        std::cout << "Running Code Studio C++ Engine: " << name << std::endl;\n    }\n};\n\nint main() {\n    Studio studio("Code Studio v2.0");\n    studio.run();\n    return 0;\n}'
+      },
+      'main.c': {
+        language: 'c',
+        content: '#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct {\n    char* name;\n    int version;\n} Application;\n\nint main() {\n    Application app = {"Code Studio C Engine", 2};\n    printf("App: %s (v%d)\\n", app.name, app.version);\n    return 0;\n}'
+      },
+      'Main.hx': {
+        language: 'haxe',
+        content: 'class Main {\n    static public function main():Void {\n        var title:String = "Code Studio Haxe Module";\n        var items:Array<String> = ["HTML", "CSS", "JS", "C++", "C", "Haxe", "Lua"];\n        trace(title);\n        for (item in items) {\n            trace("Supported language: " + item);\n        }\n    }\n}'
+      },
+      'main.lua': {
+        language: 'lua',
+        content: '-- Code Studio Lua Environment\nlocal studio = {\n    title = "Code Studio Lua Script",\n    version = 2.0\n}\n\nfunction studio.greet(name)\n    print("Hello " .. name .. " from " .. studio.title)\nend\n\nstudio.greet("Developer")'
       }
     };
 
     let activeFile = 'index.html';
 
-    // File Extensions & Colors Mapping
     const fileIcons = {
       html: { icon: 'fa-brands fa-html5', color: 'text-orange-500' },
       css: { icon: 'fa-brands fa-css3-alt', color: 'text-blue-500' },
       javascript: { icon: 'fa-brands fa-js', color: 'text-yellow-400' },
-      js: { icon: 'fa-brands fa-js', color: 'text-yellow-400' },
+      cpp: { icon: 'fa-solid fa-c', color: 'text-blue-400' },
+      c: { icon: 'fa-solid fa-c', color: 'text-blue-300' },
+      haxe: { icon: 'fa-solid fa-fire', color: 'text-orange-400' },
+      lua: { icon: 'fa-solid fa-moon', color: 'text-indigo-400' },
       json: { icon: 'fa-solid fa-code', color: 'text-green-400' },
       default: { icon: 'fa-regular fa-file', color: 'text-gray-400' }
     };
@@ -224,6 +259,25 @@
 
     window.onload = function() {
       require(['vs/editor/editor.main'], function () {
+
+        monaco.languages.register({ id: 'haxe' });
+        monaco.languages.setMonarchTokensProvider('haxe', {
+          tokenizer: {
+            root: [
+              [/\b(abstract|break|case|cast|catch|class|continue|default|enum|extends|extern|final|for|function|if|else|implements|import|in|inline|interface|macro|override|package|private|public|return|static|switch|this|throw|try|typedef|untyped|using|var|while)\b/, 'keyword'],
+              [/\b(Void|Int|Float|String|Bool|Dynamic|Array)\b/, 'type.identifier'],
+              [/".*?"/, 'string'],
+              [/'.*?'/, 'string'],
+              [/\/\/.*/, 'comment'],
+              [/\/\*/, 'comment', '@comment']
+            ],
+            comment: [
+              [/\*\//, 'comment', '@pop'],
+              [/./, 'comment']
+            ]
+          }
+        });
+
         editor = monaco.editor.create(document.getElementById('editor-container'), {
           value: files[activeFile].content,
           language: files[activeFile].language,
@@ -232,15 +286,14 @@
           fontSize: 14,
           minimap: { enabled: window.innerWidth > 768 },
           scrollBeyondLastLine: false,
-          padding: { top: 10, bottom: 10 }
+          padding: { top: 10, bottom: 10 },
+          bracketPairColorization: { enabled: true }
         });
 
-        // Event listener for cursor line/col update
         editor.onDidChangeCursorPosition((e) => {
           document.getElementById('cursor-position').innerText = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
         });
 
-        // Event listener for code change saving
         editor.onDidChangeModelContent(() => {
           if (files[activeFile]) {
             files[activeFile].content = editor.getValue();
@@ -250,11 +303,34 @@
 
         renderFileList();
         renderTabs();
+        renderExtensionsList();
       });
 
-      // Mobile Sidebar Button Trigger
       document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileSidebar);
     };
+
+    function switchSidebarTab(tabName) {
+      const expPanel = document.getElementById('sidebar-explorer');
+      const extPanel = document.getElementById('sidebar-extensions');
+      const actExp = document.getElementById('act-explorer');
+      const actExt = document.getElementById('act-extensions');
+
+      if (tabName === 'explorer') {
+        expPanel.classList.remove('hidden');
+        expPanel.classList.add('flex');
+        extPanel.classList.add('hidden');
+        extPanel.classList.remove('flex');
+        actExp.classList.add('text-white');
+        actExt.classList.remove('text-white');
+      } else {
+        extPanel.classList.remove('hidden');
+        extPanel.classList.add('flex');
+        expPanel.classList.add('hidden');
+        expPanel.classList.remove('flex');
+        actExt.classList.add('text-white');
+        actExp.classList.remove('text-white');
+      }
+    }
 
     function toggleMobileSidebar() {
       const sidebar = document.getElementById('sidebar');
@@ -274,7 +350,11 @@
       const ext = filename.split('.').pop().toLowerCase();
       if (ext === 'html') return fileIcons.html;
       if (ext === 'css') return fileIcons.css;
-      if (ext === 'js') return fileIcons.js;
+      if (ext === 'js') return fileIcons.javascript;
+      if (ext === 'cpp' || ext === 'hpp') return fileIcons.cpp;
+      if (ext === 'c' || ext === 'h') return fileIcons.c;
+      if (ext === 'hx') return fileIcons.haxe;
+      if (ext === 'lua') return fileIcons.lua;
       if (ext === 'json') return fileIcons.json;
       return fileIcons.default;
     }
@@ -329,6 +409,46 @@
       });
     }
 
+    function renderExtensionsList() {
+      const extListEl = document.getElementById('extensions-list');
+      extListEl.innerHTML = '';
+
+      extensions.forEach((ext) => {
+        const li = document.createElement('li');
+        li.className = 'bg-[#2d2d2d] p-2.5 rounded border border-[#3c3c3c] flex flex-col space-y-1.5';
+        li.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2 font-semibold text-gray-200">
+              <i class="${ext.icon} text-blue-400"></i>
+              <span>${ext.name}</span>
+            </div>
+            <button onclick="toggleExtension('${ext.id}')" class="px-2 py-0.5 rounded text-[10px] font-bold ${ext.installed ? 'bg-red-900/60 text-red-300 hover:bg-red-800' : 'bg-blue-600 text-white hover:bg-blue-500'}">
+              ${ext.installed ? 'Disable' : 'Enable'}
+            </button>
+          </div>
+          <p class="text-[11px] text-gray-400 leading-tight">${ext.desc}</p>
+        `;
+        extListEl.appendChild(li);
+      });
+    }
+
+    function toggleExtension(id) {
+      const ext = extensions.find(e => e.id === id);
+      if (ext) {
+        ext.installed = !ext.installed;
+        applyExtensionsConfig();
+        renderExtensionsList();
+      }
+    }
+
+    function applyExtensionsConfig() {
+      if (!editor) return;
+      const bracketExt = extensions.find(e => e.id === 'bracket-pair');
+      editor.updateOptions({
+        bracketPairColorization: { enabled: bracketExt ? bracketExt.installed : true }
+      });
+    }
+
     function switchFile(filename) {
       if (!files[filename]) return;
 
@@ -349,7 +469,6 @@
       renderFileList();
       renderTabs();
 
-      // Close mobile sidebar if switching file
       if (window.innerWidth < 768) {
         document.getElementById('sidebar').classList.add('-translate-x-full');
         document.getElementById('sidebar-overlay').classList.add('hidden');
@@ -357,7 +476,7 @@
     }
 
     function promptNewFile() {
-      const filename = prompt('Enter new file name (e.g. app.js, style.css):');
+      const filename = prompt('Enter new file name (e.g. main.cpp, main.c, Main.hx, script.lua):');
       if (!filename || filename.trim() === '') return;
 
       const trimmedName = filename.trim();
@@ -368,12 +487,18 @@
 
       const ext = trimmedName.split('.').pop().toLowerCase();
       let language = 'plaintext';
-      if (ext === 'html') language = 'html';
-      else if (ext === 'css') language = 'css';
-      else if (ext === 'js') language = 'javascript';
-      else if (ext === 'json') language = 'json';
+      let content = '';
 
-      files[trimmedName] = { language, content: '' };
+      if (ext === 'html') { language = 'html'; content = '<!DOCTYPE html>\n<html>\n<body>\n\n</body>\n</html>'; }
+      else if (ext === 'css') { language = 'css'; content = '/* CSS Rules */'; }
+      else if (ext === 'js') { language = 'javascript'; content = '// JavaScript File'; }
+      else if (ext === 'cpp' || ext === 'hpp') { language = 'cpp'; content = '#include <iostream>\n\nint main() {\n    return 0;\n}'; }
+      else if (ext === 'c' || ext === 'h') { language = 'c'; content = '#include <stdio.h>\n\nint main() {\n    return 0;\n}'; }
+      else if (ext === 'hx') { language = 'haxe'; content = 'class Main {\n    static public function main():Void {\n    }\n}'; }
+      else if (ext === 'lua') { language = 'lua'; content = '-- Lua script\nprint("Hello")'; }
+      else if (ext === 'json') { language = 'json'; content = '{\n}'; }
+
+      files[trimmedName] = { language, content };
       switchFile(trimmedName);
     }
 
@@ -464,28 +589,41 @@
         files[activeFile].content = editor.getValue();
       }
 
-      const htmlContent = files['index.html'] ? files['index.html'].content : '';
-      const cssContent = files['style.css'] ? files['style.css'].content : '';
-      const jsContent = files['script.js'] ? files['script.js'].content : '';
-
-      const combinedSource = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <style>${cssContent}</style>
-          </head>
-          <body>
-            ${htmlContent}
-            <script>${jsContent}<\/script>
-          </body>
-        </html>
-      `;
-
+      const currentLang = files[activeFile].language;
+      const termOutput = document.getElementById('terminal-output');
       const previewFrame = document.getElementById('preview-frame');
-      const frameDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-      frameDoc.open();
-      frameDoc.write(combinedSource);
-      frameDoc.close();
+
+      if (currentLang === 'html' || currentLang === 'css' || currentLang === 'javascript') {
+        termOutput.classList.add('hidden');
+        previewFrame.classList.remove('hidden');
+
+        const htmlContent = files['index.html'] ? files['index.html'].content : '';
+        const cssContent = files['style.css'] ? files['style.css'].content : '';
+        const jsContent = files['script.js'] ? files['script.js'].content : '';
+
+        const combinedSource = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <style>${cssContent}</style>
+            </head>
+            <body>
+              ${htmlContent}
+              <script>${jsContent}<\/script>
+            </body>
+          </html>
+        `;
+
+        const frameDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(combinedSource);
+        frameDoc.close();
+      } else {
+        previewFrame.classList.add('hidden');
+        termOutput.classList.remove('hidden');
+
+        termOutput.innerText = `[Code Studio Execution Simulation]\nCompiling and executing ${activeFile} (${currentLang.toUpperCase()})...\n\n---------------- OUTPUT ----------------\n` + files[activeFile].content + `\n\n----------------------------------------\n[Process finished with exit code 0]`;
+      }
     }
 
     function exportProjectZip() {
