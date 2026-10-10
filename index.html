@@ -2,21 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Code Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Code Studio - Web IDE</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
       background-color: #1e1e1e;
@@ -24,274 +29,481 @@
       overflow: hidden;
     }
 
-    .menu-bar {
-      height: 30px;
-      background-color: #3c3c3c;
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      font-size: 13px;
-      gap: 15px;
-      border-bottom: 1px solid #2b2b2b;
-    }
-
-    .menu-item {
-      cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 3px;
-    }
-
-    .menu-item:hover {
-      background-color: #505050;
-    }
-
-    .app-body {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .activity-bar {
-      width: 48px;
-      background-color: #333333;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding-top: 10px;
-      gap: 20px;
-    }
-
-    .activity-icon {
-      font-size: 18px;
-      color: #858585;
-      cursor: pointer;
-      transition: color 0.2s;
-    }
-
-    .activity-icon:hover, .activity-icon.active {
-      color: #ffffff;
-    }
-
-    .sidebar {
-      width: 240px;
-      background-color: #252526;
-      border-right: 1px solid #1e1e1e;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .sidebar-header {
-      padding: 10px;
-      font-size: 11px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      color: #bbbbbb;
-      text-transform: uppercase;
-    }
-
-    .file-tree {
-      list-style: none;
-      font-size: 13px;
-    }
-
-    .file-item {
-      padding: 6px 20px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .file-item:hover {
-      background-color: #2a2d2e;
-    }
-
-    .file-item.active {
-      background-color: #37373d;
-      color: #ffffff;
-    }
-
-    .workspace {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background-color: #1e1e1e;
-      overflow: hidden;
-    }
-
-    .tabs-container {
-      height: 35px;
-      background-color: #252526;
-      display: flex;
-      overflow-x: auto;
-    }
-
-    .tab {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 15px;
-      background-color: #2d2d2d;
-      font-size: 13px;
-      border-right: 1px solid #252526;
-      cursor: pointer;
-      color: #969696;
-    }
-
-    .tab.active {
-      background-color: #1e1e1e;
-      color: #ffffff;
-      border-top: 2px solid #007acc;
-    }
-
-    .tab .close-tab {
-      font-size: 11px;
-      border-radius: 3px;
-      padding: 2px;
-    }
-
-    .tab .close-tab:hover {
-      background-color: #4a4a4a;
-    }
-
-    #editor-container {
-      flex: 1;
+    .editor-container {
       width: 100%;
       height: 100%;
     }
 
-    .status-bar {
-      height: 22px;
-      background-color: #007acc;
-      color: #ffffff;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 10px;
-      font-size: 12px;
+    /* Custom Scrollbar for VS Code Aesthetic */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #424242;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4f4f4f;
     }
 
-    .status-item {
-      display: flex;
-      gap: 15px;
+    .touch-bar-btn {
+      touch-action: manipulation;
+    }
+
+    .sidebar-transition {
+      transition: transform 0.25s ease-in-out;
     }
   </style>
 </head>
-<body>
+<body class="bg-[#1e1e1e] text-[#cccccc] flex flex-col h-screen select-none">
 
-  <div class="menu-bar">
-    <div class="menu-item">File</div>
-    <div class="menu-item">Edit</div>
-    <div class="menu-item">Selection</div>
-    <div class="menu-item">View</div>
-    <div class="menu-item">Go</div>
-    <div class="menu-item">Run</div>
-    <div class="menu-item">Terminal</div>
-    <div class="menu-item">Help</div>
-  </div>
-
-  <div class="app-body">
-    <div class="activity-bar">
-      <i class="fa-regular fa-copy activity-icon active" title="Explorer"></i>
-      <i class="fa-solid fa-magnifying-glass activity-icon" title="Search"></i>
-      <i class="fa-solid fa-code-branch activity-icon" title="Source Control"></i>
-      <i class="fa-solid fa-play activity-icon" title="Run and Debug"></i>
-      <i class="fa-solid fa-border-all activity-icon" title="Extensions"></i>
+  <header class="h-10 bg-[#3c3c3c] flex items-center justify-between px-3 text-xs border-b border-[#2b2b2b] shrink-0">
+    <div class="flex items-center space-x-3">
+      <button id="mobile-menu-btn" class="md:hidden text-lg text-gray-300 hover:text-white focus:outline-none p-1">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="flex items-center space-x-2 font-bold text-white text-sm">
+        <i class="fa-solid fa-code text-blue-400"></i>
+        <span>Code Studio</span>
+      </div>
+      <nav class="hidden md:flex space-x-1 text-gray-300">
+        <span class="px-2 py-1 hover:bg-[#505050] rounded cursor-pointer">File</span>
+        <span class="px-2 py-1 hover:bg-[#505050] rounded cursor-pointer">Edit</span>
+        <span class="px-2 py-1 hover:bg-[#505050] rounded cursor-pointer">Selection</span>
+        <span class="px-2 py-1 hover:bg-[#505050] rounded cursor-pointer">View</span>
+        <span class="px-2 py-1 hover:bg-[#505050] rounded cursor-pointer">Help</span>
+      </nav>
     </div>
 
-    <div class="sidebar">
-      <div class="sidebar-header">Explorer</div>
-      <ul class="file-tree">
-        <li class="file-item active" onclick="switchFile('index.html', 'html')">
-          <i class="fa-brands fa-html5" style="color: #e34c26;"></i> index.html
-        </li>
-        <li class="file-item" onclick="switchFile('style.css', 'css')">
-          <i class="fa-brands fa-css3-alt" style="color: #264de4;"></i> style.css
-        </li>
-        <li class="file-item" onclick="switchFile('script.js', 'javascript')">
-          <i class="fa-brands fa-js" style="color: #f7df1e;"></i> script.js
-        </li>
-      </ul>
+    <!-- Action Toolbar -->
+    <div class="flex items-center space-x-2">
+      <button id="run-btn" onclick="togglePreview()" class="bg-[#238636] hover:bg-[#2ea043] text-white px-2.5 py-1 rounded flex items-center space-x-1 text-xs font-semibold shadow">
+        <i class="fa-solid fa-play"></i>
+        <span class="hidden sm:inline">Run</span>
+      </button>
+      <button onclick="formatCurrentCode()" class="bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-200 px-2 py-1 rounded text-xs border border-[#454545]" title="Format Code">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+      </button>
+      <button onclick="exportProjectZip()" class="bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-200 px-2 py-1 rounded text-xs border border-[#454545]" title="Download ZIP">
+        <i class="fa-solid fa-download"></i>
+      </button>
+      <select id="theme-select" onchange="changeTheme(this.value)" class="bg-[#252526] text-xs text-gray-200 border border-[#454545] rounded px-1.5 py-1 focus:outline-none">
+        <option value="vs-dark">VS Dark</option>
+        <option value="vs-light">VS Light</option>
+        <option value="hc-black">High Contrast</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden relative">
+
+    <!-- Activity Bar (Desktop) -->
+    <div class="hidden md:flex w-12 bg-[#333333] flex-col items-center py-3 space-y-5 text-lg text-[#858585] shrink-0 border-r border-[#252526]">
+      <i class="fa-regular fa-copy text-white cursor-pointer" title="Explorer"></i>
+      <i class="fa-solid fa-magnifying-glass hover:text-white cursor-pointer" title="Search"></i>
+      <i class="fa-solid fa-code-branch hover:text-white cursor-pointer" title="Source Control"></i>
+      <i class="fa-solid fa-border-all hover:text-white cursor-pointer" title="Extensions"></i>
     </div>
 
-    <div class="workspace">
-      <div class="tabs-container">
-        <div class="tab active" id="current-tab">
-          <i class="fa-brands fa-html5" style="color: #e34c26;"></i>
-          <span id="tab-filename">index.html</span>
-          <i class="fa-solid fa-xmark close-tab"></i>
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Sidebar Explorer Panel -->
+    <aside id="sidebar" class="fixed md:relative z-30 w-64 h-full bg-[#252526] border-r border-[#1e1e1e] flex flex-col -translate-x-full md:translate-x-0 sidebar-transition">
+      <div class="p-3 text-xs font-bold tracking-wider text-gray-400 uppercase flex justify-between items-center border-b border-[#333333]">
+        <span>Explorer</span>
+        <div class="flex space-x-2 text-sm">
+          <button onclick="promptNewFile()" class="hover:text-white" title="New File"><i class="fa-solid fa-file-circle-plus"></i></button>
+          <button onclick="toggleMobileSidebar()" class="md:hidden hover:text-white" title="Close Sidebar"><i class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
 
-      <div id="editor-container"></div>
+      <!-- File List Tree -->
+      <div class="flex-1 overflow-y-auto py-2">
+        <div class="px-3 py-1 text-xs text-gray-500 font-semibold uppercase">Project Files</div>
+        <ul id="file-list" class="text-xs"></ul>
+      </div>
+    </aside>
+
+    <!-- Main Code Workspace Area -->
+    <main class="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden min-w-0">
+      
+      <!-- Tab Header Container -->
+      <div id="tabs-bar" class="h-9 bg-[#252526] flex items-center overflow-x-auto border-b border-[#1e1e1e] shrink-0 no-scrollbar"></div>
+
+      <!-- Quick Mobile Control Touch Toolbar -->
+      <div class="flex md:hidden bg-[#2d2d2d] border-b border-[#3c3c3c] px-2 py-1 space-x-1 overflow-x-auto text-xs shrink-0">
+        <button onclick="insertText('\t')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2.5 py-1 rounded font-mono">Tab</button>
+        <button onclick="triggerUndo()" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2.5 py-1 rounded"><i class="fa-solid fa-rotate-left"></i></button>
+        <button onclick="triggerRedo()" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2.5 py-1 rounded"><i class="fa-solid fa-rotate-right"></i></button>
+        <button onclick="insertText('{')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">{</button>
+        <button onclick="insertText('}')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">}</button>
+        <button onclick="insertText('<')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">&lt;</button>
+        <button onclick="insertText('>')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">&gt;</button>
+        <button onclick="insertText(';')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">;</button>
+        <button onclick="insertText('=')" class="touch-bar-btn bg-[#3c3c3c] text-gray-200 px-2 py-1 rounded font-mono">=</button>
+      </div>
+
+      <!-- Editor Mount Frame -->
+      <div class="flex-1 relative w-full h-full">
+        <div id="editor-container" class="absolute inset-0"></div>
+      </div>
+    </main>
+
+    <div id="preview-modal" class="hidden fixed md:absolute inset-0 z-40 bg-[#1e1e1e] flex flex-col">
+      <div class="h-9 bg-[#252526] px-3 border-b border-[#333333] flex justify-between items-center text-xs">
+        <div class="flex items-center space-x-2 text-gray-300">
+          <i class="fa-solid fa-globe text-blue-400"></i>
+          <span class="font-semibold">Live Preview</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="refreshPreview()" class="hover:text-white px-2 py-1 rounded bg-[#333333]" title="Reload Preview">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+          <button onclick="togglePreview()" class="hover:text-white px-2 py-1 rounded bg-[#333333]" title="Close Preview">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      <div class="flex-1 bg-white relative">
+        <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
+      </div>
     </div>
+
   </div>
 
-  <div class="status-bar">
-    <div class="status-item">
-      <span><i class="fa-solid fa-code-branch"></i> main</span>
+  <footer class="h-6 bg-[#007acc] text-white flex items-center justify-between px-3 text-[11px] shrink-0">
+    <div class="flex items-center space-x-3">
+      <span class="flex items-center space-x-1"><i class="fa-solid fa-code-branch"></i> <span>main</span></span>
       <span><i class="fa-solid fa-circle-xmark"></i> 0 <i class="fa-solid fa-triangle-exclamation"></i> 0</span>
     </div>
-    <div class="status-item">
-      <span>Ln 1, Col 1</span>
+    <div class="flex items-center space-x-3">
+      <span id="cursor-position">Ln 1, Col 1</span>
+      <span id="char-count" class="hidden sm:inline">0 chars</span>
       <span>UTF-8</span>
-      <span id="language-indicator">HTML</span>
+      <span id="language-indicator" class="uppercase font-semibold">HTML</span>
     </div>
-  </div>
+  </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
-  
-  <script>
-    let editor;
 
+  <script>
+    let editor = null;
+    let isPreviewOpen = false;
+
+    // File Data Storage State
     const files = {
       'index.html': {
         language: 'html',
-        content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>Hello World</title>\n</head>\n<body>\n  <h1>Welcome to Code Studio!</h1>\n</body>\n</html>'
+        content: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>My Web Page</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="container">\n    <h1>Hello from Code Studio!</h1>\n    <p>Edit HTML, CSS, and JS to see changes live.</p>\n    <button id="btn">Click Me</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>'
       },
       'style.css': {
         language: 'css',
-        content: 'body {\n  background-color: #121212;\n  color: #ffffff;\n  font-family: sans-serif;\n}'
+        content: 'body {\n  margin: 0;\n  padding: 0;\n  font-family: sans-serif;\n  background: #0f172a;\n  color: #f8fafc;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n}\n\n.container {\n  text-align: center;\n  background: #1e293b;\n  padding: 2rem;\n  border-radius: 12px;\n  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);\n}\n\nbutton {\n  background: #3b82f6;\n  color: white;\n  border: none;\n  padding: 0.5rem 1rem;\n  border-radius: 6px;\n  cursor: pointer;\n  font-size: 1rem;\n  margin-top: 1rem;\n}\n\nbutton:hover {\n  background: #2563eb;\n}'
       },
       'script.js': {
         language: 'javascript',
-        content: 'console.log("Hello, World!");'
+        content: 'document.getElementById("btn").addEventListener("click", () => {\n  alert("Interactive script working inside Code Studio!");\n});'
       }
     };
 
     let activeFile = 'index.html';
 
+    // File Extensions & Colors Mapping
+    const fileIcons = {
+      html: { icon: 'fa-brands fa-html5', color: 'text-orange-500' },
+      css: { icon: 'fa-brands fa-css3-alt', color: 'text-blue-500' },
+      javascript: { icon: 'fa-brands fa-js', color: 'text-yellow-400' },
+      js: { icon: 'fa-brands fa-js', color: 'text-yellow-400' },
+      json: { icon: 'fa-solid fa-code', color: 'text-green-400' },
+      default: { icon: 'fa-regular fa-file', color: 'text-gray-400' }
+    };
+
     require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
 
-    require(['vs/editor/editor.main'], function () {
-      editor = monaco.editor.create(document.getElementById('editor-container'), {
-        value: files[activeFile].content,
-        language: files[activeFile].language,
-        theme: 'vs-dark',
-        automaticLayout: true,
-        fontSize: 14,
-        minimap: { enabled: true }
-      });
-    });
+    window.onload = function() {
+      require(['vs/editor/editor.main'], function () {
+        editor = monaco.editor.create(document.getElementById('editor-container'), {
+          value: files[activeFile].content,
+          language: files[activeFile].language,
+          theme: 'vs-dark',
+          automaticLayout: true,
+          fontSize: 14,
+          minimap: { enabled: window.innerWidth > 768 },
+          scrollBeyondLastLine: false,
+          padding: { top: 10, bottom: 10 }
+        });
 
-    function switchFile(filename, language) {
+        // Event listener for cursor line/col update
+        editor.onDidChangeCursorPosition((e) => {
+          document.getElementById('cursor-position').innerText = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+        });
+
+        // Event listener for code change saving
+        editor.onDidChangeModelContent(() => {
+          if (files[activeFile]) {
+            files[activeFile].content = editor.getValue();
+            document.getElementById('char-count').innerText = `${editor.getValue().length} chars`;
+          }
+        });
+
+        renderFileList();
+        renderTabs();
+      });
+
+      // Mobile Sidebar Button Trigger
+      document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileSidebar);
+    };
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const isHidden = sidebar.classList.contains('-translate-x-full');
+
+      if (isHidden) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function getIconMeta(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      if (ext === 'html') return fileIcons.html;
+      if (ext === 'css') return fileIcons.css;
+      if (ext === 'js') return fileIcons.js;
+      if (ext === 'json') return fileIcons.json;
+      return fileIcons.default;
+    }
+
+    function renderFileList() {
+      const fileListEl = document.getElementById('file-list');
+      fileListEl.innerHTML = '';
+
+      Object.keys(files).forEach((filename) => {
+        const iconMeta = getIconMeta(filename);
+        const isActive = filename === activeFile;
+
+        const li = document.createElement('li');
+        li.className = `flex items-center justify-between px-4 py-1.5 cursor-pointer hover:bg-[#2a2d2e] ${isActive ? 'bg-[#37373d] text-white font-medium' : 'text-gray-300'}`;
+        
+        li.innerHTML = `
+          <div class="flex items-center space-x-2 truncate" onclick="switchFile('${filename}')">
+            <i class="${iconMeta.icon} ${iconMeta.color}"></i>
+            <span class="truncate">${filename}</span>
+          </div>
+          <div class="flex items-center space-x-1.5 opacity-0 hover:opacity-100">
+            <button onclick="renameFile('${filename}', event)" class="text-gray-400 hover:text-white"><i class="fa-solid fa-pen text-[10px]"></i></button>
+            <button onclick="deleteFile('${filename}', event)" class="text-gray-400 hover:text-red-400"><i class="fa-solid fa-trash text-[10px]"></i></button>
+          </div>
+        `;
+        fileListEl.appendChild(li);
+      });
+    }
+
+    function renderTabs() {
+      const tabsBar = document.getElementById('tabs-bar');
+      tabsBar.innerHTML = '';
+
+      Object.keys(files).forEach((filename) => {
+        const iconMeta = getIconMeta(filename);
+        const isActive = filename === activeFile;
+
+        const tab = document.createElement('div');
+        tab.className = `flex items-center space-x-2 px-3 py-1.5 text-xs border-r border-[#1e1e1e] cursor-pointer shrink-0 ${isActive ? 'bg-[#1e1e1e] text-white border-t-2 border-t-blue-500' : 'bg-[#2d2d2d] text-gray-400 hover:bg-[#282828]'}`;
+        
+        tab.innerHTML = `
+          <i class="${iconMeta.icon} ${iconMeta.color}"></i>
+          <span>${filename}</span>
+          <i class="fa-solid fa-xmark text-[10px] hover:bg-gray-600 rounded p-0.5 ml-1" onclick="closeTab('${filename}', event)"></i>
+        `;
+
+        tab.onclick = (e) => {
+          if (!e.defaultPrevented) switchFile(filename);
+        };
+
+        tabsBar.appendChild(tab);
+      });
+    }
+
+    function switchFile(filename) {
+      if (!files[filename]) return;
+
       if (editor) {
         files[activeFile].content = editor.getValue();
       }
 
       activeFile = filename;
+      const fileData = files[filename];
 
-      document.getElementById('tab-filename').innerText = filename;
-      document.getElementById('language-indicator').innerText = language.toUpperCase();
-
-      const items = document.querySelectorAll('.file-item');
-      items.forEach(item => item.classList.remove('active'));
-      event.currentTarget.classList.add('active');
+      document.getElementById('language-indicator').innerText = fileData.language;
 
       if (editor) {
-        monaco.editor.setModelLanguage(editor.getModel(), language);
-        editor.setValue(files[filename].content);
+        monaco.editor.setModelLanguage(editor.getModel(), fileData.language);
+        editor.setValue(fileData.content);
       }
+
+      renderFileList();
+      renderTabs();
+
+      // Close mobile sidebar if switching file
+      if (window.innerWidth < 768) {
+        document.getElementById('sidebar').classList.add('-translate-x-full');
+        document.getElementById('sidebar-overlay').classList.add('hidden');
+      }
+    }
+
+    function promptNewFile() {
+      const filename = prompt('Enter new file name (e.g. app.js, style.css):');
+      if (!filename || filename.trim() === '') return;
+
+      const trimmedName = filename.trim();
+      if (files[trimmedName]) {
+        alert('A file with this name already exists.');
+        return;
+      }
+
+      const ext = trimmedName.split('.').pop().toLowerCase();
+      let language = 'plaintext';
+      if (ext === 'html') language = 'html';
+      else if (ext === 'css') language = 'css';
+      else if (ext === 'js') language = 'javascript';
+      else if (ext === 'json') language = 'json';
+
+      files[trimmedName] = { language, content: '' };
+      switchFile(trimmedName);
+    }
+
+    function renameFile(oldName, event) {
+      event.stopPropagation();
+      const newName = prompt('Enter new filename:', oldName);
+      if (!newName || newName.trim() === '' || newName === oldName) return;
+
+      const trimmed = newName.trim();
+      files[trimmed] = files[oldName];
+      delete files[oldName];
+
+      if (activeFile === oldName) {
+        activeFile = trimmed;
+      }
+
+      renderFileList();
+      renderTabs();
+    }
+
+    function deleteFile(filename, event) {
+      event.stopPropagation();
+      if (Object.keys(files).length <= 1) {
+        alert('You must keep at least one file.');
+        return;
+      }
+
+      if (confirm(`Are you sure you want to delete ${filename}?`)) {
+        delete files[filename];
+        if (activeFile === filename) {
+          activeFile = Object.keys(files)[0];
+        }
+        switchFile(activeFile);
+      }
+    }
+
+    function closeTab(filename, event) {
+      event.stopPropagation();
+      deleteFile(filename, event);
+    }
+
+    function insertText(text) {
+      if (!editor) return;
+      const selection = editor.getSelection();
+      const id = { label: 'quick-insert', source: 'touch-bar' };
+      editor.executeEdits(id, [{
+        range: selection,
+        text: text,
+        forceMoveMarkers: true
+      }]);
+      editor.focus();
+    }
+
+    function triggerUndo() {
+      if (editor) editor.trigger('keyboard', 'undo', null);
+    }
+
+    function triggerRedo() {
+      if (editor) editor.trigger('keyboard', 'redo', null);
+    }
+
+    function formatCurrentCode() {
+      if (editor) {
+        editor.getAction('editor.action.formatDocument').run();
+      }
+    }
+
+    function changeTheme(themeName) {
+      if (editor) {
+        monaco.editor.setTheme(themeName);
+      }
+    }
+
+    function togglePreview() {
+      const modal = document.getElementById('preview-modal');
+      isPreviewOpen = !isPreviewOpen;
+
+      if (isPreviewOpen) {
+        modal.classList.remove('hidden');
+        refreshPreview();
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function refreshPreview() {
+      if (editor) {
+        files[activeFile].content = editor.getValue();
+      }
+
+      const htmlContent = files['index.html'] ? files['index.html'].content : '';
+      const cssContent = files['style.css'] ? files['style.css'].content : '';
+      const jsContent = files['script.js'] ? files['script.js'].content : '';
+
+      const combinedSource = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>${cssContent}</style>
+          </head>
+          <body>
+            ${htmlContent}
+            <script>${jsContent}<\/script>
+          </body>
+        </html>
+      `;
+
+      const previewFrame = document.getElementById('preview-frame');
+      const frameDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+      frameDoc.open();
+      frameDoc.write(combinedSource);
+      frameDoc.close();
+    }
+
+    function exportProjectZip() {
+      if (editor) {
+        files[activeFile].content = editor.getValue();
+      }
+
+      const zip = new JSZip();
+      Object.keys(files).forEach((filename) => {
+        zip.file(filename, files[filename].content);
+      });
+
+      zip.generateAsync({ type: 'blob' }).then(function(content) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = 'code-studio-project.zip';
+        a.click();
+      });
     }
   </script>
 </body>
